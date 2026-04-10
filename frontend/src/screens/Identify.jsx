@@ -116,54 +116,91 @@ function Identify() {
         {/* RESULT */}
         {imageResult && (
           <div className="result-card" style={{ marginTop: '12px' }}>
-            <div className="result-header">
-              <span className="result-emoji">🌿</span>
-              <div>
-                <h3 className="result-disease">
-                  {imageResult.ml_result?.top_prediction || 'Plant Identified'}
-                </h3>
-                <p className="result-label">
-                  ML Confidence: {imageResult.ml_result?.confidence || 0}%
+            {imageResult.is_plant === false ? (
+
+              // NOT A PLANT — show rejection message only
+              <div style={{ textAlign: 'center', padding: '10px' }}>
+                <span style={{ fontSize: '40px' }}>⚠️</span>
+                <p style={{
+                  marginTop: '12px', fontSize: '14px',
+                  color: '#A32D2D', lineHeight: '1.8', fontWeight: '500'
+                }}>
+                  PlantDoc could not identify this as a plant leaf.
                 </p>
+                <p style={{
+                  marginTop: '8px', fontSize: '13px',
+                  color: '#666', lineHeight: '1.8'
+                }}>
+                  Please upload a clear close-up photo of a plant leaf only.
+                  Screenshots, objects, animals, and humans are not supported by PlantDoc.
+                </p>
+                <button
+                  onClick={resetImage}
+                  style={{
+                    marginTop: '16px', width: '100%', padding: '10px',
+                    background: '#FCEBEB', border: '0.5px solid #A32D2D',
+                    borderRadius: '10px', color: '#A32D2D', fontSize: '13px',
+                    cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '500'
+                  }}
+                >
+                  📷 Try Again with a Plant Photo
+                </button>
               </div>
-            </div>
 
-            {/* Confidence Bar */}
-            <div className="confidence-section" style={{ marginBottom: '12px' }}>
-              <div className="confidence-bar">
-                <div className="confidence-fill" style={{
-                  width: `${imageResult.ml_result?.confidence || 0}%`,
-                  background: imageResult.ml_result?.confidence > 70
-                    ? '#1D9E75'
-                    : imageResult.ml_result?.confidence > 40
-                    ? '#f59e0b' : '#ef4444'
-                }} />
-              </div>
-              <div className="confidence-label" style={{ marginTop: '6px' }}>
-                <span>Other possibilities:</span>
-                <span>
-                  {imageResult.ml_result?.all_predictions
-                    ?.slice(1, 3).map(p => p.label).join(', ')}
-                </span>
-              </div>
-            </div>
+            ) : (
 
-            <div className="advice-section">
-              <p className="advice-title">🌿 AI Care Guide</p>
-              <p className="advice-text">{imageResult.response}</p>
-            </div>
+              // IS A PLANT — show full result
+              <>
+                <div className="result-header">
+                  <span className="result-emoji">🌿</span>
+                  <div>
+                    <h3 className="result-disease">
+                      {imageResult.ml_result?.top_prediction || 'Plant Identified'}
+                    </h3>
+                    <p className="result-label">
+                      ML Confidence: {imageResult.ml_result?.confidence || 0}%
+                    </p>
+                  </div>
+                </div>
 
-            <button
-              onClick={resetImage}
-              style={{
-                marginTop: '12px', width: '100%', padding: '10px',
-                background: '#E1F5EE', border: '0.5px solid #5DCAA5',
-                borderRadius: '10px', color: '#0a5c44', fontSize: '13px',
-                cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '500'
-              }}
-            >
-              📷 Identify Another Plant
-            </button>
+                {/* Confidence Bar */}
+                <div className="confidence-section" style={{ marginBottom: '12px' }}>
+                  <div className="confidence-bar">
+                    <div className="confidence-fill" style={{
+                      width: `${imageResult.ml_result?.confidence || 0}%`,
+                      background: imageResult.ml_result?.confidence > 70
+                        ? '#1D9E75'
+                        : imageResult.ml_result?.confidence > 40
+                        ? '#f59e0b' : '#ef4444'
+                    }} />
+                  </div>
+                  <div className="confidence-label" style={{ marginTop: '6px' }}>
+                    <span>Other possibilities:</span>
+                    <span>
+                      {imageResult.ml_result?.all_predictions
+                        ?.slice(1, 3).map(p => p.label).join(', ')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="advice-section">
+                  <p className="advice-title">🌿 AI Care Guide</p>
+                  <p className="advice-text">{imageResult.response}</p>
+                </div>
+
+                <button
+                  onClick={resetImage}
+                  style={{
+                    marginTop: '12px', width: '100%', padding: '10px',
+                    background: '#E1F5EE', border: '0.5px solid #5DCAA5',
+                    borderRadius: '10px', color: '#0a5c44', fontSize: '13px',
+                    cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', fontWeight: '500'
+                  }}
+                >
+                  📷 Identify Another Plant
+                </button>
+              </>
+            )}
           </div>
         )}
 

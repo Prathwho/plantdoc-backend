@@ -82,8 +82,8 @@ async def diagnose(file: UploadFile = File(...)):
         confidence = float(np.max(predictions)) * 100
         disease = class_names[str(predicted_class)]
 
-        # Non-plant image check
-        if confidence < 70:
+        from ml_model import check_is_valid_plant_image
+        if not check_is_valid_plant_image(image_bytes):
             return {
                 "disease": "Not recognized",
                 "confidence": round(confidence, 2),
@@ -121,25 +121,24 @@ async def identify_image(file: UploadFile = File(...)):
         image_bytes = await file.read()
         ml_result = identify_plant_from_image(image_bytes)
 
-        if ml_result["success"]:
-            confidence = ml_result["confidence"]
+        if not ml_result["success"]:
+            return {
+                "response": "⚠️ PlantDoc could not process this image. Please upload a clear close-up photo of a plant leaf.",
+                "ml_result": ml_result,
+                "is_plant": False
+            }
 
-            # Non-plant image check
-            if confidence < 70:
-                return {
-                    "response": "⚠️ PlantDoc could not identify this as a plant leaf. Please upload a clear close-up photo of a plant leaf only. Screenshots, objects, animals, and humans are not supported by PlantDoc.",
-                    "ml_result": ml_result,
-                    "is_plant": False
-                }
+        plant_name = ml_result["top_prediction"]
+        confidence = ml_result["confidence"]
+        others = ", ".join([p["label"] for p in ml_result["all_predictions"][1:3]])
 
-            plant_name = ml_result["top_prediction"]
-            others = ", ".join([p["label"] for p in ml_result["all_predictions"][1:3]])
-
-            prompt = f"""A plant image was analyzed by an ML model trained on plant diseases.
-Top prediction: {plant_name} (confidence: {confidence}%)
+        # Use LLM to intelligently handle and respond — it will naturally say
+        # if the image doesn't look like a plant based on the prediction labels
+        prompt = f"""A user uploaded an image to PlantDoc, a plant disease detection app.
+The ML model's top prediction: {plant_name} (confidence: {confidence}%)
 Other possibilities: {others}
 
-Please provide:
+If the prediction looks like a valid plant disease/condition name (e.g. Healthy, Powdery, Rust), provide:
 1. 🌿 Plant Identity — what plant or condition this likely is in simple language
 2. 🎯 Confidence note — is {confidence}% high or low?
 3. 💧 Watering guide
@@ -149,24 +148,23 @@ Please provide:
 7. ⚠️ Disease & pest warnings
 8. 💡 Fun facts
 
+If the confidence is very low (under 40%) or the prediction doesn't make sense for a plant, gently let the user know and suggest uploading a clearer plant leaf photo.
+
 Use simple everyday language, not scientific terms."""
 
-            response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[{"role": "user", "content": prompt}]
-            )
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "user", "content": prompt}]
+        )
 
-            return {
-                "response": response.choices[0].message.content,
-                "ml_result": ml_result,
-                "is_plant": True
-            }
-        else:
-            return {
-                "response": "⚠️ PlantDoc could not process this image. Please upload a clear close-up photo of a plant leaf.",
-                "ml_result": ml_result,
-                "is_plant": False
-            }
+        # Determine is_plant based on the color heuristic run in ml_model
+        is_plant = ml_result.get("is_plant_color_heuristic", True)
+
+        return {
+            "response": response.choices[0].message.content,
+            "ml_result": ml_result,
+            "is_plant": is_plant
+        }
     except Exception as e:
         return {"error": str(e)}
 

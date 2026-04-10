@@ -5,14 +5,14 @@ import onnxruntime as ort
 import json
 
 # Load your existing model and class names
-print("🌿 Loading plant ML model...")
+print("[INFO] Loading plant ML model...")
 plant_session = ort.InferenceSession("plant_disease_model.onnx")
 
 with open("class_names.json", "r") as f:
     class_names = json.load(f)
 
-print("✅ Model loaded!")
-print(f"📋 Classes available: {len(class_names)}")
+print("[INFO] Model loaded!")
+print(f"[INFO] Classes available: {len(class_names)}")
 
 def preprocess_image(image_bytes: bytes) -> np.ndarray:
     img = Image.open(io.BytesIO(image_bytes)).convert("RGB")
@@ -20,6 +20,32 @@ def preprocess_image(image_bytes: bytes) -> np.ndarray:
     img_array = np.array(img).astype(np.float32) / 255.0
     img_array = np.expand_dims(img_array, axis=0)
     return img_array
+
+import warnings
+warnings.filterwarnings("ignore", category=FutureWarning)
+import google.generativeai as genai
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Initialize Gemini Vision mapping
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+vision_model = genai.GenerativeModel('gemini-2.5-flash')
+
+def check_is_valid_plant_image(image_bytes: bytes) -> bool:
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        prompt = "Is this a picture of a plant, plant leaf, or plant disease? Please answer with exactly one word: YES or NO."
+        response = vision_model.generate_content(
+            [prompt, img],
+            generation_config=genai.types.GenerationConfig(temperature=0.0)
+        )
+        answer = response.text.strip().upper()
+        return "YES" in answer
+    except Exception as e:
+        print(f"Gemini Vision Error: {e}")
+        return True # Default to passing if error
 
 def identify_plant_from_image(image_bytes: bytes) -> dict:
     try:
@@ -39,11 +65,14 @@ def identify_plant_from_image(image_bytes: bytes) -> dict:
                 "confidence": round(float(predictions[idx]) * 100, 1)
             })
 
+        is_plant = check_is_valid_plant_image(image_bytes)
+
         return {
             "success": True,
             "top_prediction": results[0]["label"],
             "confidence": results[0]["confidence"],
-            "all_predictions": results
+            "all_predictions": results,
+            "is_plant_color_heuristic": is_plant
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
