@@ -100,7 +100,7 @@ Based on this information, provide a detailed plant health report with:
 Be specific, warm, and encouraging. Use simple language.`
 
     try {
-      const res = await axios.post('http://localhost:8000/chat', { message: prompt })
+      const res = await axios.post('https://plantdoc-backend-2.onrender.com/chat', { message: prompt })
       setReport(res.data.response)
     } catch {
       setReport('Something went wrong. Please try again.')

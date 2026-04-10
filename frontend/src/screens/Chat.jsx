@@ -22,7 +22,7 @@ function Chat() {
     setInput('')
     setLoading(true)
     try {
-      const res = await axios.post('http://localhost:8000/chat', { message: msg })
+      const res = await axios.post('https://plantdoc-backend-2.onrender.com/chat', { message: msg })
       setMessages(prev => [...prev, { role: 'bot', text: res.data.response }])
     } catch {
       setMessages(prev => [...prev, { role: 'bot', text: 'Something went wrong. Please try again.' }])

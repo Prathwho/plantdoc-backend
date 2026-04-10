@@ -26,7 +26,7 @@ function Identify() {
     try {
       const formData = new FormData()
       formData.append('file', image)
-      const res = await axios.post('http://localhost:8000/identify-image', formData, {
+      const res = await axios.post('https://plantdoc-backend-2.onrender.com/identify-image', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       })
       if (res.data.error) setImageError(res.data.error)
