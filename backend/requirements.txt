@@ -6,3 +6,4 @@ onnxruntime
 numpy
 pillow
 python-multipart
+google-generativeai
