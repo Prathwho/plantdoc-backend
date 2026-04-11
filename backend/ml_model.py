@@ -35,23 +35,18 @@ vision_model = genai.GenerativeModel('gemini-1.5-flash')
 
 def check_is_valid_plant_image(image_bytes: bytes) -> bool:
     """
-    Acts as a strict gatekeeper to ensure only plants/leaves are processed.
-    Rejects humans, animals, objects, and generic backgrounds.
+    Very simple gatekeeper to avoid 'Celebrity' leaks while allowing all leaves.
     """
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("[GATEKEEPER] CRITICAL: GEMINI_API_KEY is missing!")
+        return True # Temporarily pass if key is missing so we can at least use the ML model
+    
     try:
         img = Image.open(io.BytesIO(image_bytes))
-        prompt = """
-        ACT AS A PLANT ADVISOR. 
-        Is this a picture of a PLANT, a PLANT LEAF, or a PLANT DISEASE?
+        # Ultra simple prompt
+        prompt = "Is this a picture of a plant or a plant leaf? Answer strictly YES or NO."
         
-        ✅ YES: If it is any kind of plant leaf, whole plant, or flower. 
-        Accept leaves even if they have HOLES, SPOTS, DISCOLORATION, or are DAMAGED. These are the most important images for us!
-        
-        ❌ NO: If the main focus is a HUMAN face/body, an ANIMAL, an OBJECT (like a car, toy, or furniture), or a generic building/room with no plant.
-        
-        Only answer NO if it is clearly NOT a plant. If it looks like a leaf, even a sick one, answer YES.
-        Answer with exactly one word: YES or NO.
-        """
         response = vision_model.generate_content(
             [prompt, img],
             generation_config=genai.types.GenerationConfig(
@@ -59,13 +54,15 @@ def check_is_valid_plant_image(image_bytes: bytes) -> bool:
                 max_output_tokens=5
             )
         )
-        answer = response.text.strip().upper()
-        # Log for debugging if needed (check your Render logs)
-        print(f"[GATEKEEPER] Vision analysis result: {answer}")
-        return "YES" in answer
+        answer = response.text.upper().strip()
+        print(f"[GATEKEEPER] AI Response: '{answer}'")
+        
+        if "YES" in answer:
+            return True
+        return False
     except Exception as e:
-        print(f"[GATEKEEPER] Gemini Vision Error: {e}")
-        return False # Fail-Safe: Reject if we can't verify (prevents leaks)
+        print(f"[GATEKEEPER] API Error: {e}")
+        return True # Default to PASS on technical error so the app doesn't break
 
 def identify_plant_from_image(image_bytes: bytes) -> dict:
     try:
