@@ -91,17 +91,22 @@ async def diagnose(file: UploadFile = File(...)):
                 "is_plant": False
             }
 
+        advice_prompt = f"""
+        A plant has been diagnosed with: {disease} (Confidence: {confidence}%).
+        
+        Provide a detailed treatment and care report:
+        1. 🔬 MINERAL ANALYSIS: What minerals might the plant be lacking?
+        2. 🛠️ 3-STEP RECOVERY: Immediate actions to take.
+        3. 🛡️ PREVENTION: How to stop this from returning.
+        4. 💧 WATERING & ☀️ SUNLIGHT: Specific needs during recovery.
+        
+        Keep it warm, simple, and expert."""
+
         advice_response = client.chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[
-                {
-                    "role": "system",
-                    "content": "You are PlantDoc, an expert plant doctor. Give brief treatment advice."
-                },
-                {
-                    "role": "user",
-                    "content": f"My plant has been diagnosed with {disease}. Give me a brief treatment plan in 3 steps."
-                }
+                {"role": "system", "content": "You are PlantDoc, an expert plant doctor."},
+                {"role": "user", "content": advice_prompt}
             ]
         )
         advice = advice_response.choices[0].message.content
@@ -132,25 +137,26 @@ async def identify_image(file: UploadFile = File(...)):
         confidence = ml_result["confidence"]
         others = ", ".join([p["label"] for p in ml_result["all_predictions"][1:3]])
 
-        # Use LLM to intelligently handle and respond — it will naturally say
-        # if the image doesn't look like a plant based on the prediction labels
-        prompt = f"""A user uploaded an image to PlantDoc, a plant disease detection app.
-The ML model's top prediction: {plant_name} (confidence: {confidence}%)
-Other possibilities: {others}
-
-If the prediction looks like a valid plant disease/condition name (e.g. Healthy, Powdery, Rust), provide:
-1. 🌿 Plant Identity — what plant or condition this likely is in simple language
-2. 🎯 Confidence note — is {confidence}% high or low?
-3. 💧 Watering guide
-4. ☀️ Sunlight needs
-5. 🌡️ Ideal temperature
-6. 🌱 Best soil type
-7. ⚠️ Disease & pest warnings
-8. 💡 Fun facts
-
-If the confidence is very low (under 40%) or the prediction doesn't make sense for a plant, gently let the user know and suggest uploading a clearer plant leaf photo.
-
-Use simple everyday language, not scientific terms."""
+        # Use LLM to intelligently handle and respond
+        prompt = f"""
+        A user uploaded a plant photo for expert analysis.
+        
+        ML PREDICTION: {plant_name}
+        CONFIDENCE: {confidence}%
+        
+        Please provide a comprehensive Plant Care & Health Guide including:
+        
+        1. 🌿 IDENTITY: Confirm the plant type and what condition {plant_name} indicates.
+        2. 🎯 ACCURACY: Is {confidence}% a reliable score for this diagnosis?
+        3. 🔬 MINERAL ANALYSIS: Based on the symptoms described/shown, which minerals are likely missing (e.g., Nitrogen, Phosphorus, Potassium, Magnesium)?
+        4. 💧 WATERING: Specific frequency and method for this plant.
+        5. ☀️ SUNLIGHT: Ideal light conditions (Direct/Indirect/Shade).
+        6. 🌱 SOIL & RE-POTTING: Best soil mixture and when to re-pot.
+        7. 🛠️ ACTION PLAN: 3 immediate steps for the user to help the plant recover or thrive.
+        8. 💡 FUN FACT: One interesting fact about this plant.
+        
+        Use warm, encouraging, and simple language suitable for a home gardener. Avoid overly technical jargon.
+        """
 
         response = client.chat.completions.create(
             model="llama-3.1-8b-instant",

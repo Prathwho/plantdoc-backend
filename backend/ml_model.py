@@ -31,21 +31,42 @@ load_dotenv()
 
 # Initialize Gemini Vision mapping
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-vision_model = genai.GenerativeModel('gemini-2.5-flash')
+vision_model = genai.GenerativeModel('gemini-1.5-flash')
 
 def check_is_valid_plant_image(image_bytes: bytes) -> bool:
+    """
+    Acts as a strict gatekeeper to ensure only plants/leaves are processed.
+    Rejects humans, animals, objects, and generic backgrounds.
+    """
     try:
         img = Image.open(io.BytesIO(image_bytes))
-        prompt = "Is this a picture of a plant, plant leaf, or plant disease? Please answer with exactly one word: YES or NO."
+        prompt = """
+        Analyze this image strictly. 
+        Is this a clear picture of a PLANT, a PLANT LEAF, or a PLANT DISEASE?
+        
+        REJECT (answer NO) if the image contains:
+        - Any Humans (faces, hands, bodies)
+        - Animals or insects
+        - Objects (cars, toys, furniture, electronics)
+        - Generic indoor/outdoor backgrounds with no clear plant focus.
+        
+        Only answer YES if it is specifically a plant-related subject.
+        Answer with exactly one word: YES or NO.
+        """
         response = vision_model.generate_content(
             [prompt, img],
-            generation_config=genai.types.GenerationConfig(temperature=0.0)
+            generation_config=genai.types.GenerationConfig(
+                temperature=0.0,
+                max_output_tokens=5
+            )
         )
         answer = response.text.strip().upper()
+        # Log for debugging if needed (check your Render logs)
+        print(f"[GATEKEEPER] Vision analysis result: {answer}")
         return "YES" in answer
     except Exception as e:
-        print(f"Gemini Vision Error: {e}")
-        return True # Default to passing if error
+        print(f"[GATEKEEPER] Gemini Vision Error: {e}")
+        return False # Fail-Safe: Reject if we can't verify (prevents leaks)
 
 def identify_plant_from_image(image_bytes: bytes) -> dict:
     try:
