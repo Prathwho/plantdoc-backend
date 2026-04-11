@@ -41,16 +41,15 @@ def check_is_valid_plant_image(image_bytes: bytes) -> bool:
     try:
         img = Image.open(io.BytesIO(image_bytes))
         prompt = """
-        Analyze this image strictly. 
-        Is this a clear picture of a PLANT, a PLANT LEAF, or a PLANT DISEASE?
+        ACT AS A PLANT ADVISOR. 
+        Is this a picture of a PLANT, a PLANT LEAF, or a PLANT DISEASE?
         
-        REJECT (answer NO) if the image contains:
-        - Any Humans (faces, hands, bodies)
-        - Animals or insects
-        - Objects (cars, toys, furniture, electronics)
-        - Generic indoor/outdoor backgrounds with no clear plant focus.
+        ✅ YES: If it is any kind of plant leaf, whole plant, or flower. 
+        Accept leaves even if they have HOLES, SPOTS, DISCOLORATION, or are DAMAGED. These are the most important images for us!
         
-        Only answer YES if it is specifically a plant-related subject.
+        ❌ NO: If the main focus is a HUMAN face/body, an ANIMAL, an OBJECT (like a car, toy, or furniture), or a generic building/room with no plant.
+        
+        Only answer NO if it is clearly NOT a plant. If it looks like a leaf, even a sick one, answer YES.
         Answer with exactly one word: YES or NO.
         """
         response = vision_model.generate_content(
